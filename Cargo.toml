@@ -4,6 +4,14 @@ version = "0.1.1"
 edition = "2024"
 license = "Apache-2.0"
 rust-version = "1.85"
+authors = ["wist Dev Team"]
+description = "Metrics collection contract and provider abstractions for the wist ecosystem"
+repository = "https://github.com/dayu-sec/wist-metrics"
+homepage = "https://github.com/dayu-sec/wist-metrics"
+documentation = "https://docs.rs/wist-metrics"
+readme = "README.md"
+keywords = ["wist", "metrics", "telemetry", "observability"]
+categories = ["development-tools", "config"]
 
 [lib]
 path = "src/lib.rs"
