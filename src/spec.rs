@@ -150,7 +150,7 @@ pub fn find_metric_spec(collection_kind: &str, fact_key: &str) -> Option<&'stati
 
 #[cfg(test)]
 mod tests {
-    use super::{find_metric_spec, METRIC_SPECS};
+    use super::{METRIC_SPECS, find_metric_spec};
 
     #[test]
     fn finds_spec_by_kind_and_fact_key() {
