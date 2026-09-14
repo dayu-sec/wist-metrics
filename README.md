@@ -2,8 +2,14 @@
 
 Metrics collection contract: providers, target views, and the metric spec table.
 
-[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![crates.io](https://img.shields.io/crates/v/wist-metrics.svg)](https://crates.io/crates/wist-metrics)
+[![docs.rs](https://img.shields.io/docsrs/wist-metrics/latest.svg)](https://docs.rs/wist-metrics)
+[![Downloads](https://img.shields.io/crates/d/wist-metrics.svg)](https://crates.io/crates/wist-metrics)
 [![MSRV](https://img.shields.io/badge/rustc-1.85+-orange.svg)](#)
+[![CI](https://github.com/dayu-sec/wist-metrics/actions/workflows/ci.yml/badge.svg)](https://github.com/dayu-sec/wist-metrics/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/dayu-sec/wist-metrics/branch/main/graph/badge.svg)](https://codecov.io/gh/dayu-sec/wist-metrics)
+[![dependency status](https://deps.rs/repo/github/dayu-sec/wist-metrics/status.svg)](https://deps.rs/repo/github/dayu-sec/wist-metrics)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 `wist-metrics` owns the contract layer and the collection abstraction of the `wist` metrics
 pipeline:
