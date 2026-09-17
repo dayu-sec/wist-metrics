@@ -3,9 +3,8 @@
 use serde::{Deserialize, Serialize};
 use wist_contracts::discovery::StringKeyValue;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ::jumo_derive::Jumo)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-#[jumo(kind = "struct", domain = "Discovery", module = "Discovery.Collect")]
 pub struct MetricsTargetViewEntry {
     pub candidate_id: String,
     pub collection_kind: String,
