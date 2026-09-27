@@ -90,6 +90,8 @@ pub const METRIC_SPECS: &[MetricSpec] = &[
         unit: "KiBy",
         value_type: "gauge_i64",
     },
+    // Linux procfs 的 rss 是「页」，其它 unix 的 `ps -o rss` 是 KiB；两者平台互斥（同一
+    // kind 下只会出现其一），故都规范化为同一个 `*.memory.rss`，单位随平台不同。
     MetricSpec {
         collection_kind: "process_metrics",
         fact_key: "process.memory.rss_pages",
@@ -150,6 +152,8 @@ pub fn find_metric_spec(collection_kind: &str, fact_key: &str) -> Option<&'stati
 
 #[cfg(test)]
 mod tests {
+    use std::collections::{BTreeMap, BTreeSet};
+
     use super::{METRIC_SPECS, find_metric_spec};
 
     #[test]
@@ -173,5 +177,145 @@ mod tests {
             let key = (spec.collection_kind, spec.fact_key);
             assert!(seen.insert(key), "duplicate spec key: {key:?}");
         }
+    }
+
+    #[test]
+    fn finds_specs_across_all_collection_kinds() {
+        let host = find_metric_spec("host_metrics", "host.loadavg.5m").expect("host spec");
+        assert_eq!(host.name, "system.load_average.5m");
+
+        let process = find_metric_spec("process_metrics", "process.state").expect("process spec");
+        assert_eq!(process.name, "process.state");
+        assert_eq!(process.value_type, "gauge_string");
+
+        let container =
+            find_metric_spec("container_metrics", "container.pid").expect("container spec");
+        assert_eq!(container.name, "container.pid");
+    }
+
+    #[test]
+    fn fact_key_is_scoped_by_collection_kind() {
+        // 同一个 fact_key 在不同 kind 下可以映射到不同指标名。
+        let process = find_metric_spec("process_metrics", "process.memory.rss_pages")
+            .expect("process rss spec");
+        let container = find_metric_spec("container_metrics", "process.memory.rss_pages")
+            .expect("container rss spec");
+        assert_eq!(process.name, "process.memory.rss");
+        assert_eq!(container.name, "container.memory.rss");
+        assert_ne!(process.name, container.name);
+    }
+
+    #[test]
+    fn unknown_collection_kind_is_none() {
+        assert!(find_metric_spec("no_such_kind", "host.loadavg.1m").is_none());
+    }
+
+    #[test]
+    fn empty_inputs_are_none() {
+        assert!(find_metric_spec("", "").is_none());
+        assert!(find_metric_spec("host_metrics", "").is_none());
+        assert!(find_metric_spec("", "host.loadavg.1m").is_none());
+    }
+
+    #[test]
+    fn lookup_is_exact_not_prefix_or_case_insensitive() {
+        assert!(find_metric_spec("host_metrics", "host.loadavg").is_none());
+        assert!(find_metric_spec("host", "host.loadavg.1m").is_none());
+        assert!(find_metric_spec("host_metrics", "HOST.LOADAVG.1M").is_none());
+    }
+
+    #[test]
+    fn table_is_not_empty() {
+        assert!(!METRIC_SPECS.is_empty());
+    }
+
+    #[test]
+    fn every_spec_field_is_non_empty() {
+        for spec in METRIC_SPECS {
+            for field in [
+                spec.collection_kind,
+                spec.fact_key,
+                spec.name,
+                spec.unit,
+                spec.value_type,
+            ] {
+                assert!(!field.trim().is_empty(), "empty field in spec: {spec:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn every_value_type_is_one_the_pipeline_supports() {
+        // 与 `wist-agentd` 的 `is_numeric_sample` / `sample_value` 支持的集合保持一致。
+        const SUPPORTED: &[&str] = &[
+            "gauge_i64",
+            "gauge_f64",
+            "gauge_string",
+            "counter_i64",
+            "counter_f64",
+        ];
+        for spec in METRIC_SPECS {
+            assert!(
+                SUPPORTED.contains(&spec.value_type),
+                "unsupported value_type `{}` in {spec:?}",
+                spec.value_type
+            );
+        }
+    }
+
+    #[test]
+    fn every_collection_kind_is_known() {
+        const KINDS: &[&str] = &["host_metrics", "process_metrics", "container_metrics"];
+        for spec in METRIC_SPECS {
+            assert!(
+                KINDS.contains(&spec.collection_kind),
+                "unknown collection_kind `{}` in {spec:?}",
+                spec.collection_kind
+            );
+        }
+    }
+
+    #[test]
+    fn lookup_matches_every_table_entry() {
+        // `METRIC_SPECS` 是 const，每个使用点可能是一份独立拷贝，故按字段比较而不是指针。
+        for spec in METRIC_SPECS {
+            let found = find_metric_spec(spec.collection_kind, spec.fact_key).expect("spec");
+            assert_eq!(found.name, spec.name);
+            assert_eq!(found.unit, spec.unit);
+            assert_eq!(found.value_type, spec.value_type);
+        }
+    }
+
+    #[test]
+    fn normalized_name_has_one_unit_except_the_rss_platform_split() {
+        // 契约：同一 collection_kind 下，一个规范化指标名只应有一个单位。
+        // 已知例外：process/container 的 rss，Linux 用 procfs 得 pages、其它 unix 用
+        // `ps -o rss` 得 KiB，二者平台互斥，这里显式固定住，避免新增别的歧义映射。
+        let mut units_by_name: BTreeMap<(&str, &str), BTreeSet<&str>> = BTreeMap::new();
+        for spec in METRIC_SPECS {
+            units_by_name
+                .entry((spec.collection_kind, spec.name))
+                .or_default()
+                .insert(spec.unit);
+        }
+        let ambiguous: Vec<((&str, &str), Vec<&str>)> = units_by_name
+            .iter()
+            .filter(|(_, units)| units.len() > 1)
+            .map(|(key, units)| (*key, units.iter().copied().collect()))
+            .collect();
+        assert_eq!(
+            ambiguous,
+            vec![
+                (
+                    ("container_metrics", "container.memory.rss"),
+                    vec!["KiBy", "pages"]
+                ),
+                (
+                    ("process_metrics", "process.memory.rss"),
+                    vec!["KiBy", "pages"]
+                ),
+            ],
+            "同名指标只允许平台互斥的 rss pages/KiBy 例外"
+        );
     }
 }
