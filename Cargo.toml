@@ -1,6 +1,6 @@
 [package]
 name = "wist-metrics"
-version = "0.2.0"  #@gxl:set(version)
+version = "0.3.0"  #@gxl:set(version)
 edition = "2024"
 license = "Apache-2.0"
 authors = ["wist Dev Team"]
@@ -18,8 +18,8 @@ path = "src/lib.rs"
 [dependencies]
 jumo-derive = "0.1"
 serde = { version = "1.0", features = ["derive"] }
-wist-contracts = { version = "0.7" }
-#wist-contracts = { version = "0.7", path = "../wist-contracts" }
+wist-contracts = { version = "0.8" }
+#wist-contracts = { version = "0.8", path = "../wist-contracts" }
 
 [dev-dependencies]
 serde_json = "1.0"
