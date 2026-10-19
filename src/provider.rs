@@ -31,6 +31,9 @@ pub struct MetricsCollectionOutcome {
     pub last_error: Option<String>,
     #[serde(default)]
     pub runtime_facts: Vec<StringKeyValue>,
+    /// 带标签的采集事实（如按挂载点区分的文件系统容量）。
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub labeled_facts: Vec<MetricsLabeledFact>,
     #[serde(default)]
     pub sample_targets: Vec<MetricsCollectionTargetSample>,
 }
@@ -49,11 +52,31 @@ pub struct MetricsCollectionTargetSample {
     pub execution_hints: Vec<StringKeyValue>,
     #[serde(default)]
     pub runtime_facts: Vec<StringKeyValue>,
+    /// 带标签的采集事实：同一个 fact key 的多个实例（如不同挂载点）用 `labels` 区分。
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub labeled_facts: Vec<MetricsLabeledFact>,
+}
+
+/// 带标签的采集事实。
+///
+/// 例如文件系统容量：`key = host.filesystem.usage_percent`，
+/// `labels = [{mount: /var}, {fstype: xfs}]`。标签只用于区分同一指标下的多个实例，
+/// 不参与 spec 的 `fact_key` 匹配。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ::jumo_derive::Jumo)]
+#[serde(deny_unknown_fields)]
+#[jumo(kind = "struct", domain = "Discovery", module = "Discovery.Collect")]
+pub struct MetricsLabeledFact {
+    pub key: String,
+    pub value: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub labels: Vec<StringKeyValue>,
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{MetricProvider, MetricsCollectionOutcome, MetricsCollectionTargetSample};
+    use super::{
+        MetricProvider, MetricsCollectionOutcome, MetricsCollectionTargetSample, MetricsLabeledFact,
+    };
     use crate::target::MetricsTargetViewEntry;
     use serde_json::{Value, json};
     use wist_contracts::discovery::StringKeyValue;
@@ -70,6 +93,14 @@ mod tests {
                 StringKeyValue::new("host.loadavg.1m", "0.25"),
                 StringKeyValue::new("host.uptime.seconds", "3600"),
             ],
+            labeled_facts: vec![MetricsLabeledFact {
+                key: "host.filesystem.usage_percent".to_string(),
+                value: "95".to_string(),
+                labels: vec![
+                    StringKeyValue::new("mount", "/var"),
+                    StringKeyValue::new("fstype", "xfs"),
+                ],
+            }],
             sample_targets: vec![full_sample_target()],
         }
     }
@@ -83,6 +114,11 @@ mod tests {
             resource_ref: "host-1".to_string(),
             execution_hints: vec![StringKeyValue::new("host.name", "host-a")],
             runtime_facts: vec![StringKeyValue::new("host.loadavg.1m", "0.25")],
+            labeled_facts: vec![MetricsLabeledFact {
+                key: "host.filesystem.available_kb".to_string(),
+                value: "1048576".to_string(),
+                labels: vec![StringKeyValue::new("mount", "/var")],
+            }],
         }
     }
 
@@ -129,6 +165,7 @@ mod tests {
             serde_json::from_value(minimal_outcome_json()).expect("deserialize minimal outcome");
         assert!(outcome.last_error.is_none());
         assert!(outcome.runtime_facts.is_empty());
+        assert!(outcome.labeled_facts.is_empty());
         assert!(outcome.sample_targets.is_empty());
     }
 
@@ -218,6 +255,59 @@ mod tests {
     }
 
     #[test]
+    fn labeled_facts_round_trip_and_keep_labels() {
+        let outcome = full_outcome();
+        let encoded = serde_json::to_string(&outcome).expect("serialize outcome");
+        let decoded: MetricsCollectionOutcome =
+            serde_json::from_str(&encoded).expect("deserialize outcome");
+        assert_eq!(decoded.labeled_facts, outcome.labeled_facts);
+        assert_eq!(decoded.labeled_facts[0].labels.len(), 2);
+    }
+
+    #[test]
+    fn empty_labeled_facts_are_omitted_from_json() {
+        let mut outcome = full_outcome();
+        outcome.labeled_facts.clear();
+        let value: Value = serde_json::to_value(&outcome).expect("serialize outcome");
+        assert!(value.get("labeled_facts").is_none());
+    }
+
+    #[test]
+    fn labeled_fact_rejects_unknown_field() {
+        let value = json!({
+            "key": "host.filesystem.usage_percent",
+            "value": "95",
+            "unexpected": 1,
+        });
+        assert!(serde_json::from_value::<MetricsLabeledFact>(value).is_err());
+    }
+
+    #[test]
+    fn labeled_fact_preserves_duplicate_labels() {
+        let fact = MetricsLabeledFact {
+            key: "host.filesystem.usage_percent".to_string(),
+            value: "95".to_string(),
+            labels: vec![
+                StringKeyValue::new("mount", "/a"),
+                StringKeyValue::new("mount", "/b"),
+            ],
+        };
+        let encoded = serde_json::to_string(&fact).expect("serialize fact");
+        let decoded: MetricsLabeledFact = serde_json::from_str(&encoded).expect("deserialize fact");
+        assert_eq!(decoded.labels.len(), 2);
+    }
+
+    #[test]
+    fn labeled_fact_labels_default_to_empty() {
+        let fact: MetricsLabeledFact = serde_json::from_value(json!({
+            "key": "host.filesystem.total_kb",
+            "value": "1024",
+        }))
+        .expect("deserialize labeled fact");
+        assert!(fact.labels.is_empty());
+    }
+
+    #[test]
     fn target_sample_minimal_json_applies_vec_defaults() {
         let value = json!({
             "candidate_id": "proc-1",
@@ -230,6 +320,7 @@ mod tests {
         assert!(sample.last_error.is_none());
         assert!(sample.execution_hints.is_empty());
         assert!(sample.runtime_facts.is_empty());
+        assert!(sample.labeled_facts.is_empty());
     }
 
     #[test]
@@ -267,6 +358,7 @@ mod tests {
                     failed_targets: 0,
                     last_error: None,
                     runtime_facts: Vec::new(),
+                    labeled_facts: Vec::new(),
                     sample_targets: Vec::new(),
                 }
             }

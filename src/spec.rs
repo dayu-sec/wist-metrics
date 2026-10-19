@@ -90,6 +90,79 @@ pub const METRIC_SPECS: &[MetricSpec] = &[
         unit: "KiBy",
         value_type: "gauge_i64",
     },
+    // Linux 容量按角色拆分：system = 根文件系统（系统盘），data = 其余本地数据盘汇总。
+    // 既有的 `system.disk.*` 在 Linux 上等同 system，保留用于兼容旧消费方。
+    MetricSpec {
+        collection_kind: "host_metrics",
+        fact_key: "host.disk.system.usage_percent",
+        name: "system.disk.system.usage",
+        unit: "percent",
+        value_type: "gauge_f64",
+    },
+    MetricSpec {
+        collection_kind: "host_metrics",
+        fact_key: "host.disk.system.total_kb",
+        name: "system.disk.system.total",
+        unit: "KiBy",
+        value_type: "gauge_i64",
+    },
+    MetricSpec {
+        collection_kind: "host_metrics",
+        fact_key: "host.disk.system.available_kb",
+        name: "system.disk.system.available",
+        unit: "KiBy",
+        value_type: "gauge_i64",
+    },
+    MetricSpec {
+        collection_kind: "host_metrics",
+        fact_key: "host.disk.data.usage_percent",
+        name: "system.disk.data.usage",
+        unit: "percent",
+        value_type: "gauge_f64",
+    },
+    MetricSpec {
+        collection_kind: "host_metrics",
+        fact_key: "host.disk.data.total_kb",
+        name: "system.disk.data.total",
+        unit: "KiBy",
+        value_type: "gauge_i64",
+    },
+    MetricSpec {
+        collection_kind: "host_metrics",
+        fact_key: "host.disk.data.available_kb",
+        name: "system.disk.data.available",
+        unit: "KiBy",
+        value_type: "gauge_i64",
+    },
+    MetricSpec {
+        collection_kind: "host_metrics",
+        fact_key: "host.disk.data.mount_count",
+        name: "system.disk.data.mount_count",
+        unit: "1",
+        value_type: "gauge_i64",
+    },
+    // 逐挂载点容量：同一 fact key 会有多条带 `mount` / `fstype` 标签的实例。
+    MetricSpec {
+        collection_kind: "host_metrics",
+        fact_key: "host.filesystem.usage_percent",
+        name: "system.filesystem.usage",
+        unit: "percent",
+        value_type: "gauge_f64",
+    },
+    MetricSpec {
+        collection_kind: "host_metrics",
+        fact_key: "host.filesystem.total_kb",
+        name: "system.filesystem.total",
+        unit: "KiBy",
+        value_type: "gauge_i64",
+    },
+    MetricSpec {
+        collection_kind: "host_metrics",
+        fact_key: "host.filesystem.available_kb",
+        name: "system.filesystem.available",
+        unit: "KiBy",
+        value_type: "gauge_i64",
+    },
     // Linux procfs 的 rss 是「页」，其它 unix 的 `ps -o rss` 是 KiB；两者平台互斥（同一
     // kind 下只会出现其一），故都规范化为同一个 `*.memory.rss`，单位随平台不同。
     MetricSpec {
@@ -162,6 +235,25 @@ mod tests {
         assert_eq!(spec.name, "system.load_average.1m");
         assert_eq!(spec.unit, "1");
         assert_eq!(spec.value_type, "gauge_f64");
+    }
+
+    #[test]
+    fn finds_filesystem_capacity_specs() {
+        let usage = find_metric_spec("host_metrics", "host.filesystem.usage_percent")
+            .expect("filesystem usage spec");
+        assert_eq!(usage.name, "system.filesystem.usage");
+        assert_eq!(usage.unit, "percent");
+        assert_eq!(usage.value_type, "gauge_f64");
+
+        let total = find_metric_spec("host_metrics", "host.filesystem.total_kb")
+            .expect("filesystem total spec");
+        assert_eq!(total.name, "system.filesystem.total");
+        assert_eq!(total.unit, "KiBy");
+
+        let available = find_metric_spec("host_metrics", "host.filesystem.available_kb")
+            .expect("filesystem available spec");
+        assert_eq!(available.name, "system.filesystem.available");
+        assert_eq!(available.unit, "KiBy");
     }
 
     #[test]
