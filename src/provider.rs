@@ -59,7 +59,7 @@ pub struct MetricsCollectionTargetSample {
 
 /// 带标签的采集事实。
 ///
-/// 例如文件系统容量：`key = host.filesystem.usage_percent`，
+/// 例如文件系统容量：`key = host.filesystem.usage_ratio`，
 /// `labels = [{mount: /var}, {fstype: xfs}]`。标签只用于区分同一指标下的多个实例，
 /// 不参与 spec 的 `fact_key` 匹配。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ::jumo_derive::Jumo)]
@@ -94,7 +94,7 @@ mod tests {
                 StringKeyValue::new("host.uptime.seconds", "3600"),
             ],
             labeled_facts: vec![MetricsLabeledFact {
-                key: "host.filesystem.usage_percent".to_string(),
+                key: "host.filesystem.usage_ratio".to_string(),
                 value: "95".to_string(),
                 labels: vec![
                     StringKeyValue::new("mount", "/var"),
@@ -115,7 +115,7 @@ mod tests {
             execution_hints: vec![StringKeyValue::new("host.name", "host-a")],
             runtime_facts: vec![StringKeyValue::new("host.loadavg.1m", "0.25")],
             labeled_facts: vec![MetricsLabeledFact {
-                key: "host.filesystem.available_kb".to_string(),
+                key: "host.filesystem.available_bytes".to_string(),
                 value: "1048576".to_string(),
                 labels: vec![StringKeyValue::new("mount", "/var")],
             }],
@@ -275,7 +275,7 @@ mod tests {
     #[test]
     fn labeled_fact_rejects_unknown_field() {
         let value = json!({
-            "key": "host.filesystem.usage_percent",
+            "key": "host.filesystem.usage_ratio",
             "value": "95",
             "unexpected": 1,
         });
@@ -285,7 +285,7 @@ mod tests {
     #[test]
     fn labeled_fact_preserves_duplicate_labels() {
         let fact = MetricsLabeledFact {
-            key: "host.filesystem.usage_percent".to_string(),
+            key: "host.filesystem.usage_ratio".to_string(),
             value: "95".to_string(),
             labels: vec![
                 StringKeyValue::new("mount", "/a"),
@@ -300,7 +300,7 @@ mod tests {
     #[test]
     fn labeled_fact_labels_default_to_empty() {
         let fact: MetricsLabeledFact = serde_json::from_value(json!({
-            "key": "host.filesystem.total_kb",
+            "key": "host.filesystem.total_bytes",
             "value": "1024",
         }))
         .expect("deserialize labeled fact");
