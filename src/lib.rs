@@ -4,12 +4,15 @@
 //! This crate owns the W4「契约层 + 采集层抽象」：
 //! - [`provider`]：`MetricProvider` trait 与采集结果类型（collect → samples 的中转结构）；
 //! - [`target`]：采集目标视图条目（provider 的输入）；
-//! - [`spec`]：指标声明表（fact_key → 规范化指标名/单位/类型）。
+//! - [`spec`]：指标声明表（fact_key → 规范化指标名/单位/类型）；
+//! - [`names`]：**非 fact 派生**的规范名（agent 自观测 `agent_*`）、序列 label 键与单位换算 ——
+//!   写入端（agentd）与读取端（网关 / 中心）共同引用，名字只改一处。
 //!
 //! 系统指标（host/process/container）的 provider 仍在 `wist-agentd` 里实现；非系统指标
 //! （Postgres / MySQL / …）的 provider 放本 crate，其重依赖（如 `sqlx`）以 feature 门控，
 //! 不进入 `wist-agentd` 的默认依赖图。
 
+pub mod names;
 pub mod provider;
 pub mod spec;
 pub mod target;
