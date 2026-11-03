@@ -3,6 +3,21 @@
 本文件记录 `wist-metrics` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.10.0] - 2026-11-03
+
+### 新增
+
+- `names::agent` 补齐全部自观测指标：`UPLINK_METRICS_FAILED_TOTAL` / `COLLECT_TARGETS`，
+  并新增闭合表 `ALL_SELF_METRICS`（写入端用它断言「产出的名字都在这张表里」）。
+- `names::label` 补齐注册表里出现的动态 label 键（`device` / `cpu` / `mode` / `state` /
+  `target_kind` / `outcome`）与闭合表 `ALL_LABELS`。
+
+### 为什么
+
+上一版只收了趋势需要的五个名字，agentd 写侧仍在硬编码 `agent_uplink_metrics_failed_total` /
+`agent_collect_targets` 与九个 label 键。补齐后写入端可以全面引用常量，由 `ALL_SELF_METRICS` /
+`ALL_LABELS` 做闭合断言——新增名字时测试先红，而不是上线后“多了一条没人认识、也没人查的序列”。
+
 ## [0.9.0] - 2026-11-03
 
 ### 新增
