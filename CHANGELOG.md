@@ -3,6 +3,22 @@
 本文件记录 `wist-metrics` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.9.0] - 2026-11-03
+
+### 新增
+
+- **`names` 模块：规范指标名与 label 键的唯一来源**。新增 `names::agent`（agent 自观测
+  `agent_memory_bytes` / `agent_cpu_ratio` / `agent_cpu_cores` / `agent_admin_latency_seconds` /
+  `agent_discovery_policy_version` 与趋势清单 `HISTORY`）、`names::label`（`agent` / `instance` /
+  `disk_role` / `mountpoint` / `fstype`），以及单位换算 `ratio_to_percent` / `percent_to_ratio` /
+  `seconds_to_millis` / `millis_to_seconds`。
+
+### 为什么
+
+写侧与读侧各自手写名字会漂：`wist-agentd` 0.21 改成规范下划线名后，管理面读趋势仍在查旧点分名
+（`agent.cpu.percent`），两侧单测都能过，而“Agent 总览”的资源曲线一直是空的。名字收进本 crate 后，
+改名只能改到这里；读取方（`wist-gateway` / `wist-center`）与写入方（`wist-agentd`）引用同一份常量。
+
 ## [0.8.0] - 2026-11-03
 
 ### 变更（不兼容）
