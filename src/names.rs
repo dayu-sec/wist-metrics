@@ -27,9 +27,27 @@ pub mod agent {
     pub const ADMIN_LATENCY_SECONDS: &str = "agent_admin_latency_seconds";
     /// 当前生效的发现策略版本（`1`，阶标，不进趋势图）。
     pub const DISCOVERY_POLICY_VERSION: &str = "agent_discovery_policy_version";
+    /// 指标帧上送失败的累计次数（`counter`，进程生命周期内）。
+    pub const UPLINK_METRICS_FAILED_TOTAL: &str = "agent_uplink_metrics_failed_total";
+    /// 采集记账：每批按 `target_kind × outcome` 报目标数（含因上限丢弃的）。
+    pub const COLLECT_TARGETS: &str = "agent_collect_targets";
 
     /// 趋势图要拉的四个名字（策略版本是阶标，不进趋势）。
     pub const HISTORY: &[&str] = &[MEMORY_BYTES, CPU_RATIO, CPU_CORES, ADMIN_LATENCY_SECONDS];
+
+    /// **全部** agent 自观测指标名（含记账与失败计数）。
+    ///
+    /// 写入端（agentd）用它做闭合断言：产出的每个 `agent_*` 名字都必须在这张表里，
+    /// 否则就是又一次「写侧偷偷新加了一个只有它自己知道的名字」。
+    pub const ALL_SELF_METRICS: &[&str] = &[
+        MEMORY_BYTES,
+        CPU_RATIO,
+        CPU_CORES,
+        ADMIN_LATENCY_SECONDS,
+        DISCOVERY_POLICY_VERSION,
+        UPLINK_METRICS_FAILED_TOTAL,
+        COLLECT_TARGETS,
+    ];
 }
 
 /// 序列 label 键（规范 §3.3：`agent` 是 agent 身份，**不得**与 `agent_id` 混用）。
@@ -44,6 +62,36 @@ pub mod label {
     pub const MOUNTPOINT: &str = "mountpoint";
     /// 文件系统类型。
     pub const FSTYPE: &str = "fstype";
+    /// 设备名（磁盘 / 网卡等）。
+    pub const DEVICE: &str = "device";
+    /// 逻辑核编号。
+    pub const CPU: &str = "cpu";
+    /// CPU 时间口径（`user` / `system` / `idle` …）。
+    pub const MODE: &str = "mode";
+    /// 对象状态（进程 / 容器）。
+    pub const STATE: &str = "state";
+    /// 采集目标类型（`host` / `process` / `container`）。
+    pub const TARGET_KIND: &str = "target_kind";
+    /// 采集结果（`succeeded` / `failed` / `dropped`）。
+    pub const OUTCOME: &str = "outcome";
+
+    /// 序列上可能出现的**全部** label 键（身份 + 注册表 label + 采集记账）。
+    ///
+    /// 与 `spec::METRIC_SPECS` 的 `const_labels` / `dynamic_labels` 保持一致；写入端用它做闭合断言，
+    /// 数据面（WPL/OML）新增字段时也应该对照这张表 —— 少一个就意味着那个维度静默丢失。
+    pub const ALL_LABELS: &[&str] = &[
+        AGENT,
+        INSTANCE,
+        DISK_ROLE,
+        MOUNTPOINT,
+        FSTYPE,
+        DEVICE,
+        CPU,
+        MODE,
+        STATE,
+        TARGET_KIND,
+        OUTCOME,
+    ];
 }
 
 /// 单核比例 → 百分比（页面口径）。`0.5` → `50.0`。
@@ -96,6 +144,42 @@ mod tests {
         assert!(agent::HISTORY.contains(&agent::CPU_CORES));
         assert!(agent::HISTORY.contains(&agent::ADMIN_LATENCY_SECONDS));
         assert!(!agent::HISTORY.contains(&agent::DISCOVERY_POLICY_VERSION));
+    }
+
+    /// 闭合表必须覆盖趋势清单：新增一个「只存在于写侧」的名字会先在这里被拦住。
+    #[test]
+    fn all_self_metrics_covers_history_and_is_deduplicated() {
+        for name in agent::HISTORY {
+            assert!(
+                agent::ALL_SELF_METRICS.contains(name),
+                "{name} 不在 ALL_SELF_METRICS 里"
+            );
+        }
+        assert!(agent::ALL_SELF_METRICS.contains(&agent::UPLINK_METRICS_FAILED_TOTAL));
+        assert!(agent::ALL_SELF_METRICS.contains(&agent::COLLECT_TARGETS));
+        let mut sorted = agent::ALL_SELF_METRICS.to_vec();
+        sorted.sort_unstable();
+        sorted.dedup();
+        assert_eq!(
+            sorted.len(),
+            agent::ALL_SELF_METRICS.len(),
+            "名单里有重复项"
+        );
+    }
+
+    /// label 闭集：身份键必须在表里，且每一项都是不带点的 snake_case。
+    #[test]
+    fn all_labels_is_a_closed_snake_case_set() {
+        assert!(label::ALL_LABELS.contains(&label::AGENT));
+        assert!(label::ALL_LABELS.contains(&label::INSTANCE));
+        for key in label::ALL_LABELS {
+            assert!(!key.contains('.'), "{key} 不得是点分名");
+            assert!(
+                key.chars()
+                    .all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '_'),
+                "{key} 必须是 snake_case"
+            );
+        }
     }
 
     #[test]
