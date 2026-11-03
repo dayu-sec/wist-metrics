@@ -182,6 +182,31 @@ mod tests {
         }
     }
 
+    /// 闭集必须覆盖 `spec::METRIC_SPECS` 声明过的**全部** label 键。
+    ///
+    /// 上面那段注释承诺「与 spec 的 `const_labels` / `dynamic_labels` 保持一致」，但两边是分开
+    /// 维护的。这条测试把承诺变成事实：spec 新增一个维度而这里没跟上，写侧的闭合断言就会把
+    /// 合法 label 当成未登记的键（或反过来，表里留着一个根本没人声明的键）。
+    #[test]
+    fn all_labels_covers_every_label_declared_by_the_spec_table() {
+        for spec in crate::spec::METRIC_SPECS {
+            for (key, _value) in spec.const_labels {
+                assert!(
+                    label::ALL_LABELS.contains(key),
+                    "{} 的 const_labels 用了 {key}，但它不在 names::label::ALL_LABELS 里",
+                    spec.name
+                );
+            }
+            for key in spec.dynamic_labels {
+                assert!(
+                    label::ALL_LABELS.contains(key),
+                    "{} 的 dynamic_labels 用了 {key}，但它不在 names::label::ALL_LABELS 里",
+                    spec.name
+                );
+            }
+        }
+    }
+
     #[test]
     fn unit_helpers_round_trip() {
         assert_eq!(ratio_to_percent(0.5), 50.0);
