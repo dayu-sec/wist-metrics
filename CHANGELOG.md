@@ -3,6 +3,14 @@
 本文件记录 `wist-metrics` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.7.0] - 2026-11-03
+
+### 变更（不兼容）
+
+- **删除旧名注册表**：`LEGACY_METRIC_SPECS` 整体移除，`find_metric_spec` 只返回规范名。
+  旧名（`system.memory.total` 这类点分写法）不再被注册表认知，采集侧必须停止产出
+  `legacy.*` fact。升级后旧看板的对应曲线停止新增。
+
 ## [0.6.0] - 2026-11-03
 
 ### 新增
