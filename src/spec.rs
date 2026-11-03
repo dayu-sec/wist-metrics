@@ -394,178 +394,10 @@ pub const METRIC_SPECS: &[MetricSpec] = &[
     },
 ];
 
-/// 双写期使用的旧指标声明（v1 之前的名/单位）。
-///
-/// 只为**名称**双写：label 按新规则（`instance` / `mountpoint` / `device`），
-/// 值与单位保持旧口径（KiBy / percent），否则老看板的数值会整体放大 1024 倍。
-/// 双写期满后整表删除。
-pub const LEGACY_METRIC_SPECS: &[MetricSpec] = &[
-    legacy(
-        "host_metrics",
-        "legacy.host.loadavg.1m",
-        "system.load_average.1m",
-        "1",
-        "gauge_f64",
-    ),
-    legacy(
-        "host_metrics",
-        "legacy.host.loadavg.5m",
-        "system.load_average.5m",
-        "1",
-        "gauge_f64",
-    ),
-    legacy(
-        "host_metrics",
-        "legacy.host.loadavg.15m",
-        "system.load_average.15m",
-        "1",
-        "gauge_f64",
-    ),
-    legacy(
-        "host_metrics",
-        "legacy.host.uptime.seconds",
-        "system.uptime",
-        "s",
-        "gauge_f64",
-    ),
-    legacy(
-        "host_metrics",
-        "legacy.host.memory.total_kb",
-        "system.memory.total",
-        "KiBy",
-        "gauge_i64",
-    ),
-    legacy(
-        "host_metrics",
-        "legacy.host.memory.available_kb",
-        "system.memory.available",
-        "KiBy",
-        "gauge_i64",
-    ),
-    legacy(
-        "host_metrics",
-        "legacy.host.disk.system.usage_percent",
-        "system.disk.usage",
-        "percent",
-        "gauge_f64",
-    ),
-    legacy(
-        "host_metrics",
-        "legacy.host.disk.system.total_kb",
-        "system.disk.total",
-        "KiBy",
-        "gauge_i64",
-    ),
-    legacy(
-        "host_metrics",
-        "legacy.host.disk.system.available_kb",
-        "system.disk.available",
-        "KiBy",
-        "gauge_i64",
-    ),
-    legacy(
-        "host_metrics",
-        "legacy.host.disk.data.usage_percent",
-        "system.disk.data.usage",
-        "percent",
-        "gauge_f64",
-    ),
-    legacy(
-        "host_metrics",
-        "legacy.host.disk.data.total_kb",
-        "system.disk.data.total",
-        "KiBy",
-        "gauge_i64",
-    ),
-    legacy(
-        "host_metrics",
-        "legacy.host.disk.data.available_kb",
-        "system.disk.data.available",
-        "KiBy",
-        "gauge_i64",
-    ),
-    legacy(
-        "host_metrics",
-        "legacy.host.disk.data.mount_count",
-        "system.disk.data.mount_count",
-        "1",
-        "gauge_i64",
-    ),
-    legacy(
-        "host_metrics",
-        "legacy.host.filesystem.usage_percent",
-        "system.filesystem.usage",
-        "percent",
-        "gauge_f64",
-    ),
-    legacy(
-        "host_metrics",
-        "legacy.host.filesystem.total_kb",
-        "system.filesystem.total",
-        "KiBy",
-        "gauge_i64",
-    ),
-    legacy(
-        "host_metrics",
-        "legacy.host.filesystem.available_kb",
-        "system.filesystem.available",
-        "KiBy",
-        "gauge_i64",
-    ),
-    legacy(
-        "process_metrics",
-        "legacy.process.memory.rss_pages",
-        "process.memory.rss",
-        "pages",
-        "gauge_i64",
-    ),
-    legacy(
-        "process_metrics",
-        "legacy.process.memory.rss_kb",
-        "process.memory.rss",
-        "KiBy",
-        "gauge_i64",
-    ),
-    legacy(
-        "container_metrics",
-        "legacy.process.memory.rss_pages",
-        "container.memory.rss",
-        "pages",
-        "gauge_i64",
-    ),
-    legacy(
-        "container_metrics",
-        "legacy.process.memory.rss_kb",
-        "container.memory.rss",
-        "KiBy",
-        "gauge_i64",
-    ),
-];
-
-const fn legacy(
-    collection_kind: &'static str,
-    fact_key: &'static str,
-    name: &'static str,
-    unit: &'static str,
-    value_type: &'static str,
-) -> MetricSpec {
-    MetricSpec {
-        collection_kind,
-        fact_key,
-        name,
-        unit,
-        value_type,
-        const_labels: NO_CONST,
-        dynamic_labels: &[],
-        semconv_ref: "",
-    }
-}
-
-/// 按 `(collection_kind, fact_key)` 查找指标声明（含双写期的旧名）。
+/// 按 `(collection_kind, fact_key)` 查找指标声明。
 pub fn find_metric_spec(collection_kind: &str, fact_key: &str) -> Option<&'static MetricSpec> {
     METRIC_SPECS
         .iter()
-        .chain(LEGACY_METRIC_SPECS.iter())
         .find(|spec| spec.collection_kind == collection_kind && spec.fact_key == fact_key)
 }
 
@@ -640,6 +472,19 @@ mod tests {
     fn names_follow_the_snake_case_grammar() {
         for spec in METRIC_SPECS {
             assert!(is_valid_name(spec.name), "bad metric name `{}`", spec.name);
+        }
+    }
+
+    #[test]
+    fn no_legacy_names_remain() {
+        // 旧名（点分写法 + `legacy.` fact 前缀）已整体下线：注册表只允许规范名。
+        for spec in METRIC_SPECS {
+            assert!(!spec.name.contains('.'), "legacy name `{}`", spec.name);
+            assert!(
+                !spec.fact_key.starts_with("legacy."),
+                "legacy fact key `{}`",
+                spec.fact_key
+            );
         }
     }
 
@@ -784,27 +629,6 @@ mod tests {
                     "unknown dynamic label `{key}`"
                 );
             }
-        }
-    }
-
-    #[test]
-    fn legacy_specs_are_reachable_and_keep_their_names() {
-        use super::LEGACY_METRIC_SPECS;
-        assert!(!LEGACY_METRIC_SPECS.is_empty());
-        for spec in LEGACY_METRIC_SPECS {
-            let found = find_metric_spec(spec.collection_kind, spec.fact_key).expect("legacy spec");
-            assert_eq!(found.name, spec.name);
-            assert!(
-                matches!(spec.unit, "1" | "s" | "KiBy" | "percent" | "pages"),
-                "unexpected legacy unit `{}`",
-                spec.unit
-            );
-            assert!(
-                !spec.name.ends_with("_bytes") && !spec.name.ends_with("_seconds"),
-                "legacy name must keep its old spelling: {}",
-                spec.name
-            );
-            assert!(spec.fact_key.starts_with("legacy."));
         }
     }
 
