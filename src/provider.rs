@@ -28,6 +28,9 @@ pub struct MetricsCollectionOutcome {
     pub attempted_targets: usize,
     pub succeeded_targets: usize,
     pub failed_targets: usize,
+    /// 超出采样上限、本批次未采集的目标数（不得静默丢弃）。
+    #[serde(default)]
+    pub dropped_targets: usize,
     pub last_error: Option<String>,
     #[serde(default)]
     pub runtime_facts: Vec<StringKeyValue>,
@@ -88,6 +91,7 @@ mod tests {
             attempted_targets: 2,
             succeeded_targets: 1,
             failed_targets: 1,
+            dropped_targets: 0,
             last_error: Some("probe failed".to_string()),
             runtime_facts: vec![
                 StringKeyValue::new("host.loadavg.1m", "0.25"),
@@ -356,6 +360,7 @@ mod tests {
                     attempted_targets: targets.len(),
                     succeeded_targets: targets.len(),
                     failed_targets: 0,
+                    dropped_targets: 0,
                     last_error: None,
                     runtime_facts: Vec::new(),
                     labeled_facts: Vec::new(),
