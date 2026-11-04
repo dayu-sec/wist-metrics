@@ -392,6 +392,59 @@ pub const METRIC_SPECS: &[MetricSpec] = &[
         dynamic_labels: NO_LABELS,
         semconv_ref: "",
     },
+    // ---- Kafka broker（协议探针，不依赖 exporter）----
+    // 名字空间 `kafka` 见规范 §2.2；事实键按 `broker_id` 区分目标。
+    MetricSpec {
+        collection_kind: "kafka_broker_metrics",
+        fact_key: "kafka.broker.up",
+        name: "kafka_broker_up",
+        unit: "1",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "kafka_broker_metrics",
+        fact_key: "kafka.broker.is_controller",
+        name: "kafka_broker_role_is_controller",
+        unit: "1",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "kafka_broker_metrics",
+        fact_key: "kafka.partition.count",
+        name: "kafka_partition_count",
+        unit: "1",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "kafka_broker_metrics",
+        fact_key: "kafka.partition.under_replicated",
+        name: "kafka_partition_under_replicated",
+        unit: "1",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "kafka_broker_metrics",
+        // 集群级：离线分区没有 leader，归到具体 broker 会重复计数。
+        fact_key: "kafka.partition.offline",
+        name: "kafka_partition_offline",
+        unit: "1",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
 ];
 
 /// 按 `(collection_kind, fact_key)` 查找指标声明。
@@ -407,7 +460,12 @@ mod tests {
 
     use super::{METRIC_SPECS, find_metric_spec};
 
-    const COLLECTION_KINDS: &[&str] = &["host_metrics", "process_metrics", "container_metrics"];
+    const COLLECTION_KINDS: &[&str] = &[
+        "host_metrics",
+        "process_metrics",
+        "container_metrics",
+        "kafka_broker_metrics",
+    ];
     const UNITS: &[&str] = &["By", "s", "1"];
     const VALUE_TYPES: &[&str] = &["gauge_i64", "gauge_f64", "counter_i64", "counter_f64"];
 
@@ -494,6 +552,7 @@ mod tests {
             "host_metrics" => "system",
             "process_metrics" => "process",
             "container_metrics" => "container",
+            "kafka_broker_metrics" => "kafka",
             other => panic!("unexpected collection kind {other}"),
         };
         for spec in METRIC_SPECS {

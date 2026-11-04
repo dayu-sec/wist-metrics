@@ -3,6 +3,21 @@
 本文件记录 `wist-metrics` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.11.0] - 2026-11-04
+
+### 新增
+
+- 注册 `kafka_broker_metrics` 采集域与 5 个指标声明：`kafka_broker_up` /
+  `kafka_broker_role_is_controller` / `kafka_partition_count` /
+  `kafka_partition_under_replicated` / `kafka_partition_offline`。
+- 命名空间闭集增加 `kafka`（规范 §2.2）。
+
+### 为什么
+
+Kafka 指标改由 agentd 的协议探针采集（不依赖 Prometheus / exporter）。
+broker 身份走 `instance = kafka:<cluster_key>:<broker_id>`，不新增 label ——
+与规范 §3「`instance` 是被监控对象的稳定身份」一致，也不给 VM 线协议加一条只有 Kafka 用的键。
+
 ## [0.10.0] - 2026-11-03
 
 ### 新增
