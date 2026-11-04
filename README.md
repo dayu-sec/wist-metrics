@@ -22,6 +22,10 @@ System collectors (host / process / container) are implemented in `wist-agentd`;
 collectors (databases, external services) live here behind feature gates so their heavy drivers
 never enter `wist-agentd`'s default dependency graph.
 
+例外：Kafka broker 探针（`kafka_broker_metrics`）实现为**零外部依赖**的线协议客户端，
+放在 `wist-agentd` 里 —— 它没有"重驱动"可隔离，且要用 agentd 的采集线程与配置；
+它的**指标声明仍在本仓** `spec` 表里（名字与单位只有一处定义）。
+
 ## Example
 
 ```rust

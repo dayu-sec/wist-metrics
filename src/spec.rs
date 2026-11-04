@@ -12,7 +12,7 @@
 /// 一个指标的声明：某个采集域的某个 runtime fact 规范化成什么指标。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MetricSpec {
-    /// 采集域（`host_metrics` / `process_metrics` / `container_metrics`）。
+    /// 采集域（`host_metrics` / `process_metrics` / `container_metrics` / `kafka_broker_metrics`）。
     pub collection_kind: &'static str,
     /// 采集侧 runtime fact 键（必须单位中立，值已是 `unit` 单位）。
     pub fact_key: &'static str,
@@ -393,7 +393,8 @@ pub const METRIC_SPECS: &[MetricSpec] = &[
         semconv_ref: "",
     },
     // ---- Kafka broker（协议探针，不依赖 exporter）----
-    // 名字空间 `kafka` 见规范 §2.2；事实键按 `broker_id` 区分目标。
+    // 名字空间 `kafka` 见规范 §2.2。目标身份走 `instance`
+    // （`kafka:<cluster_key>:<broker_id>`），所以这几条都不带动态 label。
     MetricSpec {
         collection_kind: "kafka_broker_metrics",
         fact_key: "kafka.broker.up",
@@ -636,6 +637,29 @@ mod tests {
                     spec.fact_key
                 );
             }
+        }
+    }
+
+    #[test]
+    fn kafka_broker_metrics_keep_the_documented_names() {
+        // 线名是查询与看板的契约：改名不会报错，只会让既有面板静默变空。
+        for (fact_key, name) in [
+            ("kafka.broker.up", "kafka_broker_up"),
+            (
+                "kafka.broker.is_controller",
+                "kafka_broker_role_is_controller",
+            ),
+            ("kafka.partition.count", "kafka_partition_count"),
+            (
+                "kafka.partition.under_replicated",
+                "kafka_partition_under_replicated",
+            ),
+            ("kafka.partition.offline", "kafka_partition_offline"),
+        ] {
+            let spec = find_metric_spec("kafka_broker_metrics", fact_key).expect("spec");
+            assert_eq!(spec.name, name, "`{fact_key}` 的线名被改动了");
+            assert_eq!(spec.unit, "1", "`{name}` 是无量纲计数");
+            assert_eq!(spec.value_type, "gauge_i64", "`{name}` 是可上可下的读数");
         }
     }
 
