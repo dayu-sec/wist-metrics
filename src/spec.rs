@@ -437,6 +437,16 @@ pub const METRIC_SPECS: &[MetricSpec] = &[
     },
     MetricSpec {
         collection_kind: "kafka_broker_metrics",
+        fact_key: "kafka.log_dir.size_bytes",
+        name: "kafka_log_dir_size_bytes",
+        unit: "By",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "kafka_broker_metrics",
         // 集群级：离线分区没有 leader，归到具体 broker 会重复计数。
         fact_key: "kafka.partition.offline",
         name: "kafka_partition_offline",
@@ -655,10 +665,15 @@ mod tests {
                 "kafka_partition_under_replicated",
             ),
             ("kafka.partition.offline", "kafka_partition_offline"),
+            ("kafka.log_dir.size_bytes", "kafka_log_dir_size_bytes"),
         ] {
             let spec = find_metric_spec("kafka_broker_metrics", fact_key).expect("spec");
             assert_eq!(spec.name, name, "`{fact_key}` 的线名被改动了");
-            assert_eq!(spec.unit, "1", "`{name}` 是无量纲计数");
+            if name == "kafka_log_dir_size_bytes" {
+                assert_eq!(spec.unit, "By", "`{name}` 是字节量");
+            } else {
+                assert_eq!(spec.unit, "1", "`{name}` 是无量纲计数");
+            }
             assert_eq!(spec.value_type, "gauge_i64", "`{name}` 是可上可下的读数");
         }
     }
