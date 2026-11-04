@@ -74,6 +74,17 @@ pub mod label {
     pub const TARGET_KIND: &str = "target_kind";
     /// 采集结果（`succeeded` / `failed` / `dropped`）。
     pub const OUTCOME: &str = "outcome";
+    /// 系统主机名（OTel `host.name`）。只出现在 `system_host_info` 上，不进测量序列的身份。
+    pub const HOST_NAME: &str = "host_name";
+    /// 主机主 IP（OTel `host.ip`）：非回环 IPv4，按接口名排序取第一条。
+    /// 只出现在 `system_host_info` 上 —— IP 会随 DHCP/迁移变化，贴到测量序列会切断历史。
+    pub const HOST_IP: &str = "host_ip";
+    /// 操作系统（`std::env::consts::OS`）。
+    pub const OS: &str = "os";
+    /// CPU 架构（`std::env::consts::ARCH`）。
+    pub const ARCH: &str = "arch";
+    /// 内核版本。
+    pub const KERNEL: &str = "kernel";
 
     /// 序列上可能出现的**全部** label 键（身份 + 注册表 label + 采集记账）。
     ///
@@ -91,6 +102,11 @@ pub mod label {
         STATE,
         TARGET_KIND,
         OUTCOME,
+        HOST_NAME,
+        HOST_IP,
+        OS,
+        ARCH,
+        KERNEL,
     ];
 }
 

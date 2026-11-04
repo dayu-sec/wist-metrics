@@ -35,6 +35,20 @@ const NO_LABELS: &[&str] = &[];
 
 /// 指标注册表（新增指标 = 在这里加一行）。
 pub const METRIC_SPECS: &[MetricSpec] = &[
+    // ---- 主机：身份（info 指标）----
+    // 一条 1 值序列承载「这是哪台机器」：主机名 / 主 IP / 系统 / 架构 / 内核。
+    // 这些值会变（改名、换 IP、内核升级），所以**只**放在 info 指标上；测量序列的
+    // 身份仍是 `(name, agent, instance)`，变一个 IP 只替换这一条序列，不会切断历史。
+    MetricSpec {
+        collection_kind: "host_metrics",
+        fact_key: "host.info",
+        name: "system_host_info",
+        unit: "1",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: &["host_name", "host_ip", "os", "arch", "kernel"],
+        semconv_ref: "host.name / host.ip",
+    },
     // ---- 主机：CPU ----
     MetricSpec {
         collection_kind: "host_metrics",
@@ -722,7 +736,17 @@ mod tests {
                 assert!(
                     matches!(
                         *key,
-                        "cpu" | "mode" | "device" | "mountpoint" | "fstype" | "state"
+                        "cpu"
+                            | "mode"
+                            | "device"
+                            | "mountpoint"
+                            | "fstype"
+                            | "state"
+                            | "host_name"
+                            | "host_ip"
+                            | "os"
+                            | "arch"
+                            | "kernel"
                     ),
                     "unknown dynamic label `{key}`"
                 );

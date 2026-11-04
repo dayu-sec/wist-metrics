@@ -3,6 +3,22 @@
 本文件记录 `wist-metrics` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.13.0] - 2026-11-04
+
+### 新增
+
+- `names::label` 新增主机身份 label：`HOST_NAME` / `HOST_IP` / `OS` / `ARCH` / `KERNEL`，
+  并纳入 `ALL_LABELS` 闭合表。
+- `spec::METRIC_SPECS` 新增主机身份 info 指标 `system_host_info`（fact `host.info`，值恒为 1）：
+  `host_name` / `host_ip` / `os` / `arch` / `kernel` 只在这一条序列上，测量序列身份不变。
+
+### 为什么
+
+主机名 / IP / 系统 / 架构 / 内核是「这是哪台机器」的必需信息，但以前只存在于控制面注册表（且
+注册表只存 `node_id` / `hostname` / `ip_addresses`，`os` / `arch` / 内核根本没人存）。
+把这些值平铺到 `system_*` 测量序列上会让历史在改名/换 IP/内核升级时断成两段，所以集中到一条
+info 指标：变化只替换这一条序列。
+
 ## [0.12.0] - 2026-11-04
 
 ### 新增
