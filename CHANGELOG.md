@@ -3,6 +3,28 @@
 本文件记录 `wist-metrics` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.14.0] - 2026-11-05
+
+### 新增
+
+- `spec::METRIC_SPECS` 新增三条 Kafka 指标：
+  - `kafka_consumergroup_lag`（fact `kafka.consumergroup.lag`，label `group` / `topic`，P0）；
+  - `kafka_consumergroup_state`（fact `kafka.consumergroup.state`，label `group` / `state`，一热）；
+  - `kafka_log_dir_usable_bytes`（fact `kafka.log_dir.usable_bytes`，`By`）。
+- `names::label` 新增 `GROUP` / `TOPIC`，并纳入 `ALL_LABELS` 闭合表。
+
+### 为什么
+
+前两条回答「消费跟不跟得上」——`kafka_consumergroup_lag` 是 Kafka 侧唯一能反映业务积压的
+指标，单看 partition / ISR / 容量都看不出来（集群完美但消费停了）。`state` 用来区分「积压
+因为在 rebalance」还是「消费者真的慢了」。
+
+`kafka_log_dir_usable_bytes` 来自 `DescribeLogDirs` v4 的 `usable_bytes`：主机侧的
+`system_filesystem_usage_ratio` 才是整盘分母，而 Kafka 侧的可用空间能对应到它自己的卷，
+排障时「Kafka 说快满了、主机说还有 40%」这种分歧必须两边都能看到。
+
+组名 / topic 是**业务标识**（会随上下线变化），所以只做 label，不参与 `instance` 身份。
+
 ## [0.13.0] - 2026-11-04
 
 ### 新增

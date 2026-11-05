@@ -74,6 +74,15 @@ pub mod label {
     pub const TARGET_KIND: &str = "target_kind";
     /// 采集结果（`succeeded` / `failed` / `dropped`）。
     pub const OUTCOME: &str = "outcome";
+    /// Kafka 消费组 id（`kafka_consumergroup_lag` / `kafka_consumergroup_state`）。
+    ///
+    /// 组名是**用户的业务标识**（`orders` / `payments`），不是基础设施身份：
+    /// 它随业务上下线变化，所以只能做 label，不能进 `instance`。
+    pub const GROUP: &str = "group";
+    /// Kafka topic 名（`kafka_consumergroup_lag`）。
+    ///
+    /// 同一个组可能订阅多个 topic，lag 必须按 topic 拆开才能定位「积压在哪条流上」。
+    pub const TOPIC: &str = "topic";
     /// 系统主机名（OTel `host.name`）。只出现在 `system_host_info` 上，不进测量序列的身份。
     pub const HOST_NAME: &str = "host_name";
     /// 主机主 IP（OTel `host.ip`）：非回环 IPv4，按接口名排序取第一条。
@@ -102,6 +111,8 @@ pub mod label {
         STATE,
         TARGET_KIND,
         OUTCOME,
+        GROUP,
+        TOPIC,
         HOST_NAME,
         HOST_IP,
         OS,

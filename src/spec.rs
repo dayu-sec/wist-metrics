@@ -470,6 +470,41 @@ pub const METRIC_SPECS: &[MetricSpec] = &[
         dynamic_labels: NO_LABELS,
         semconv_ref: "",
     },
+    MetricSpec {
+        collection_kind: "kafka_broker_metrics",
+        // 消费积压：`log_end_offset - committed_offset`，按 topic 求和。
+        // 组名与 topic 都是业务标识，只能做 label（instance 仍是 `kafka:<cluster>`）。
+        fact_key: "kafka.consumergroup.lag",
+        name: "kafka_consumergroup_lag",
+        unit: "1",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: &["group", "topic"],
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "kafka_broker_metrics",
+        // 一热：取值（`stable` / `rebalancing` / `empty` / `dead`）进 `state` label，样本值恒 1。
+        fact_key: "kafka.consumergroup.state",
+        name: "kafka_consumergroup_state",
+        unit: "1",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: &["group", "state"],
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "kafka_broker_metrics",
+        // 可用空间：`DescribeLogDirs` v4 的 `usable_bytes` 之和。
+        // 仍然是「Kafka 自己的卷」，整盘分母仍由 `system_filesystem_*` 负责。
+        fact_key: "kafka.log_dir.usable_bytes",
+        name: "kafka_log_dir_usable_bytes",
+        unit: "By",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
 ];
 
 /// 按 `(collection_kind, fact_key)` 查找指标声明。
@@ -680,16 +715,32 @@ mod tests {
             ),
             ("kafka.partition.offline", "kafka_partition_offline"),
             ("kafka.log_dir.size_bytes", "kafka_log_dir_size_bytes"),
+            ("kafka.log_dir.usable_bytes", "kafka_log_dir_usable_bytes"),
+            ("kafka.consumergroup.lag", "kafka_consumergroup_lag"),
+            ("kafka.consumergroup.state", "kafka_consumergroup_state"),
         ] {
             let spec = find_metric_spec("kafka_broker_metrics", fact_key).expect("spec");
             assert_eq!(spec.name, name, "`{fact_key}` 的线名被改动了");
-            if name == "kafka_log_dir_size_bytes" {
+            if name.ends_with("_bytes") {
                 assert_eq!(spec.unit, "By", "`{name}` 是字节量");
             } else {
                 assert_eq!(spec.unit, "1", "`{name}` 是无量纲计数");
             }
             assert_eq!(spec.value_type, "gauge_i64", "`{name}` 是可上可下的读数");
         }
+    }
+
+    #[test]
+    fn kafka_consumergroup_series_are_labeled_by_group_and_topic() {
+        // lag 必须按 topic 拆开才能定位积压源；state 是枚举一热（group + state）。
+        let lag = find_metric_spec("kafka_broker_metrics", "kafka.consumergroup.lag").expect("lag");
+        assert_eq!(lag.dynamic_labels, &["group", "topic"]);
+        let state =
+            find_metric_spec("kafka_broker_metrics", "kafka.consumergroup.state").expect("state");
+        assert_eq!(state.dynamic_labels, &["group", "state"]);
+        // 身份仍走 instance：这两条都不参与 instance 的构成。
+        assert!(lag.const_labels.is_empty());
+        assert!(state.const_labels.is_empty());
     }
 
     #[test]
@@ -742,6 +793,8 @@ mod tests {
                             | "mountpoint"
                             | "fstype"
                             | "state"
+                            | "group"
+                            | "topic"
                             | "host_name"
                             | "host_ip"
                             | "os"
