@@ -3,6 +3,33 @@
 本文件记录 `wist-metrics` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.15.0] - 2026-11-05
+
+### 新增
+
+- 新采集域 `mysql_metrics`（MySQL / TiDB，SQL 直采，不依赖 exporter），15 条指标：
+  - 存活与容量：`mysql_up`、`mysql_uptime_seconds`、`mysql_connections_current`、`mysql_connections_max`、
+    `mysql_threads_running`；
+  - 流量与错误（计数器）：`mysql_queries_total`、`mysql_slow_queries_total`、`mysql_aborted_connects_total`、
+    `mysql_received_bytes_total`、`mysql_sent_bytes_total`；
+  - InnoDB：`mysql_innodb_buffer_pool_pages`、`mysql_innodb_buffer_pool_pages_free`、
+    `mysql_innodb_buffer_pool_size_bytes`；
+  - 复制：`mysql_replication_lag_seconds`、`mysql_replication_running`。
+
+### 为什么
+
+MySQL 的故障面与 Kafka 不同：连接打满、慢查询堆积、buffer pool 抖动、复制断掉——这四类
+占了现场绝大多数。前两类靠 `Threads_connected` / `Threads_running` / `SQL 计数器` 就能看出来，
+后两类必须看 `SHOW REPLICA STATUS` 与 InnoDB 页数，`system_*` 主机指标完全看不见。
+
+读数**全部**来自 `SHOW GLOBAL STATUS` / `SHOW GLOBAL VARIABLES` / `SHOW REPLICA STATUS`，
+不需要 `performance_schema`、审计日志或任何插件（只读账号的最小权限就能采）。
+
+两条口径约定：
+
+- 不是副本就不出 `mysql_replication_*` 序列（**不补 0**）；
+- `mysql_up` 只在本轮查询成功时出，连接失败时段里没有样本。
+
 ## [0.14.0] - 2026-11-05
 
 ### 新增

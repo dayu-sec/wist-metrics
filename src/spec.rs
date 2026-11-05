@@ -505,6 +505,167 @@ pub const METRIC_SPECS: &[MetricSpec] = &[
         dynamic_labels: NO_LABELS,
         semconv_ref: "",
     },
+    // ---- MySQL / TiDB（SQL 探针，不依赖 exporter）----
+    // 目标身份走 `instance`（`mysql:<host>:<port>`），所以这几条不带动态 label。
+    // 读数全部来自 `SHOW GLOBAL STATUS` / `SHOW GLOBAL VARIABLES` / 复制状态，
+    // 不需要 `performance_schema` 与审计日志（只读账号最小权限就能采）。
+    MetricSpec {
+        collection_kind: "mysql_metrics",
+        fact_key: "mysql.up",
+        name: "mysql_up",
+        unit: "1",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "mysql_metrics",
+        fact_key: "mysql.uptime.seconds",
+        name: "mysql_uptime_seconds",
+        unit: "s",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "mysql_metrics",
+        // 当前连接数 / 上限一起给：只看 `connections_current` 判断不了「离打满还有多远」。
+        fact_key: "mysql.connections.current",
+        name: "mysql_connections_current",
+        unit: "1",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "db.client.connections.usage",
+    },
+    MetricSpec {
+        collection_kind: "mysql_metrics",
+        fact_key: "mysql.connections.max",
+        name: "mysql_connections_max",
+        unit: "1",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "db.client.connections.max",
+    },
+    MetricSpec {
+        collection_kind: "mysql_metrics",
+        // 真正在跑的线程数：连接数正常但这里打满，说明有慢查询堆着。
+        fact_key: "mysql.threads.running",
+        name: "mysql_threads_running",
+        unit: "1",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "mysql_metrics",
+        // `Questions` 是自启动以来的累计值（计数器），重启归零由查询侧处理断点。
+        fact_key: "mysql.queries.total",
+        name: "mysql_queries_total",
+        unit: "1",
+        value_type: "counter_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "mysql_metrics",
+        fact_key: "mysql.slow_queries.total",
+        name: "mysql_slow_queries_total",
+        unit: "1",
+        value_type: "counter_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "mysql_metrics",
+        fact_key: "mysql.aborted_connects.total",
+        name: "mysql_aborted_connects_total",
+        unit: "1",
+        value_type: "counter_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "mysql_metrics",
+        fact_key: "mysql.bytes_received.total",
+        name: "mysql_received_bytes_total",
+        unit: "By",
+        value_type: "counter_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "mysql_metrics",
+        fact_key: "mysql.bytes_sent.total",
+        name: "mysql_sent_bytes_total",
+        unit: "By",
+        value_type: "counter_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "mysql_metrics",
+        // buffer pool 的「页数 / 空闲页数」成对给：命中率与是否在抖动都能从这里推。
+        fact_key: "mysql.innodb.buffer_pool.page_count",
+        name: "mysql_innodb_buffer_pool_pages",
+        unit: "1",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "mysql_metrics",
+        fact_key: "mysql.innodb.buffer_pool.page_free_count",
+        name: "mysql_innodb_buffer_pool_pages_free",
+        unit: "1",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "mysql_metrics",
+        // 配置值（`innodb_buffer_pool_size` 变量），不是「已用」：已用看下面两条页数。
+        fact_key: "mysql.innodb.buffer_pool_size_bytes",
+        name: "mysql_innodb_buffer_pool_size_bytes",
+        unit: "By",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "mysql_metrics",
+        // 复制延迟：`Seconds_Behind_Source`。**不是副本就不出这条序列**（不补 0）。
+        fact_key: "mysql.replication.lag_seconds",
+        name: "mysql_replication_lag_seconds",
+        unit: "s",
+        value_type: "gauge_f64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "mysql_metrics",
+        // IO 与 SQL 两个线程都 Yes 才算 1；断一个就是 0（延迟读数此时不可信）。
+        fact_key: "mysql.replication.running",
+        name: "mysql_replication_running",
+        unit: "1",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
 ];
 
 /// 按 `(collection_kind, fact_key)` 查找指标声明。
@@ -525,6 +686,7 @@ mod tests {
         "process_metrics",
         "container_metrics",
         "kafka_broker_metrics",
+        "mysql_metrics",
     ];
     const UNITS: &[&str] = &["By", "s", "1"];
     const VALUE_TYPES: &[&str] = &["gauge_i64", "gauge_f64", "counter_i64", "counter_f64"];
@@ -613,6 +775,7 @@ mod tests {
             "process_metrics" => "process",
             "container_metrics" => "container",
             "kafka_broker_metrics" => "kafka",
+            "mysql_metrics" => "mysql",
             other => panic!("unexpected collection kind {other}"),
         };
         for spec in METRIC_SPECS {
@@ -696,6 +859,107 @@ mod tests {
                     spec.fact_key
                 );
             }
+        }
+    }
+
+    #[test]
+    fn mysql_metrics_keep_the_documented_names() {
+        // 同 Kafka：线名是查询与看板的契约，改一行就会让面板静默变空。
+        for (fact_key, name, unit, value_type) in [
+            ("mysql.up", "mysql_up", "1", "gauge_i64"),
+            (
+                "mysql.uptime.seconds",
+                "mysql_uptime_seconds",
+                "s",
+                "gauge_i64",
+            ),
+            (
+                "mysql.connections.current",
+                "mysql_connections_current",
+                "1",
+                "gauge_i64",
+            ),
+            (
+                "mysql.connections.max",
+                "mysql_connections_max",
+                "1",
+                "gauge_i64",
+            ),
+            (
+                "mysql.threads.running",
+                "mysql_threads_running",
+                "1",
+                "gauge_i64",
+            ),
+            (
+                "mysql.queries.total",
+                "mysql_queries_total",
+                "1",
+                "counter_i64",
+            ),
+            (
+                "mysql.slow_queries.total",
+                "mysql_slow_queries_total",
+                "1",
+                "counter_i64",
+            ),
+            (
+                "mysql.aborted_connects.total",
+                "mysql_aborted_connects_total",
+                "1",
+                "counter_i64",
+            ),
+            (
+                "mysql.bytes_received.total",
+                "mysql_received_bytes_total",
+                "By",
+                "counter_i64",
+            ),
+            (
+                "mysql.bytes_sent.total",
+                "mysql_sent_bytes_total",
+                "By",
+                "counter_i64",
+            ),
+            (
+                "mysql.innodb.buffer_pool.page_count",
+                "mysql_innodb_buffer_pool_pages",
+                "1",
+                "gauge_i64",
+            ),
+            (
+                "mysql.innodb.buffer_pool.page_free_count",
+                "mysql_innodb_buffer_pool_pages_free",
+                "1",
+                "gauge_i64",
+            ),
+            (
+                "mysql.innodb.buffer_pool_size_bytes",
+                "mysql_innodb_buffer_pool_size_bytes",
+                "By",
+                "gauge_i64",
+            ),
+            (
+                "mysql.replication.lag_seconds",
+                "mysql_replication_lag_seconds",
+                "s",
+                "gauge_f64",
+            ),
+            (
+                "mysql.replication.running",
+                "mysql_replication_running",
+                "1",
+                "gauge_i64",
+            ),
+        ] {
+            let spec = find_metric_spec("mysql_metrics", fact_key).expect("spec");
+            assert_eq!(spec.name, name, "`{fact_key}` 的线名被改动了");
+            assert_eq!(spec.unit, unit, "`{name}` 的单位被改动了");
+            assert_eq!(spec.value_type, value_type, "`{name}` 的值类型被改动了");
+            assert!(
+                spec.dynamic_labels.is_empty(),
+                "`{name}` 的身份走 instance，不应带动态 label"
+            );
         }
     }
 
