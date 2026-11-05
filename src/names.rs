@@ -83,6 +83,10 @@ pub mod label {
     ///
     /// 同一个组可能订阅多个 topic，lag 必须按 topic 拆开才能定位「积压在哪条流上」。
     pub const TOPIC: &str = "topic";
+    /// Doris BE 的地址（`ip:heartbeat_port`）。
+    ///
+    /// 一台 FE 管多个 BE，容量与 tablet 必须按 BE 拆开才能看出「哪台在扛不住」。
+    pub const BE: &str = "be";
     /// 系统主机名（OTel `host.name`）。只出现在 `system_host_info` 上，不进测量序列的身份。
     pub const HOST_NAME: &str = "host_name";
     /// 主机主 IP（OTel `host.ip`）：非回环 IPv4，按接口名排序取第一条。
@@ -113,6 +117,7 @@ pub mod label {
         OUTCOME,
         GROUP,
         TOPIC,
+        BE,
         HOST_NAME,
         HOST_IP,
         OS,

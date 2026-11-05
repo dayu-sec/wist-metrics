@@ -802,6 +802,49 @@ pub const METRIC_SPECS: &[MetricSpec] = &[
         dynamic_labels: NO_LABELS,
         semconv_ref: "",
     },
+    // ---- Doris（SQL 探针：连 FE 的 MySQL 协议口，读 BE 视图）----
+    // P0 只做 BE 存活 / 容量 / tablet（§12.1-7），不依赖审计日志。
+    // BE 用 `be` label 区分：一台 FE 管多个 BE，容量必须按机器拆开。
+    MetricSpec {
+        collection_kind: "doris_metrics",
+        fact_key: "doris.be.up",
+        name: "doris_be_up",
+        unit: "1",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: &["be"],
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "doris_metrics",
+        fact_key: "doris.be.capacity_bytes",
+        name: "doris_be_capacity_bytes",
+        unit: "By",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: &["be"],
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "doris_metrics",
+        fact_key: "doris.be.available_bytes",
+        name: "doris_be_available_bytes",
+        unit: "By",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: &["be"],
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "doris_metrics",
+        fact_key: "doris.be.tablets",
+        name: "doris_be_tablets",
+        unit: "1",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: &["be"],
+        semconv_ref: "",
+    },
 ];
 
 /// 按 `(collection_kind, fact_key)` 查找指标声明。
@@ -824,6 +867,7 @@ mod tests {
         "kafka_broker_metrics",
         "mysql_metrics",
         "pg_metrics",
+        "doris_metrics",
     ];
     const UNITS: &[&str] = &["By", "s", "1"];
     const VALUE_TYPES: &[&str] = &["gauge_i64", "gauge_f64", "counter_i64", "counter_f64"];
@@ -914,6 +958,7 @@ mod tests {
             "kafka_broker_metrics" => "kafka",
             "mysql_metrics" => "mysql",
             "pg_metrics" => "pg",
+            "doris_metrics" => "doris",
             other => panic!("unexpected collection kind {other}"),
         };
         for spec in METRIC_SPECS {
@@ -1102,6 +1147,25 @@ mod tests {
     }
 
     #[test]
+    fn doris_metrics_keep_the_documented_names() {
+        for (fact_key, name, unit) in [
+            ("doris.be.up", "doris_be_up", "1"),
+            ("doris.be.capacity_bytes", "doris_be_capacity_bytes", "By"),
+            ("doris.be.available_bytes", "doris_be_available_bytes", "By"),
+            ("doris.be.tablets", "doris_be_tablets", "1"),
+        ] {
+            let spec = find_metric_spec("doris_metrics", fact_key).expect("spec");
+            assert_eq!(spec.name, name, "`{fact_key}` 的线名被改动了");
+            assert_eq!(spec.unit, unit, "`{name}` 的单位被改动了");
+            assert_eq!(
+                spec.dynamic_labels,
+                &["be"],
+                "`{name}` 必须按 BE 拆开（一台 FE 管多台 BE）"
+            );
+        }
+    }
+
+    #[test]
     fn pg_metrics_keep_the_documented_names() {
         for (fact_key, name, unit, value_type) in [
             ("pg.up", "pg_up", "1", "gauge_i64"),
@@ -1272,6 +1336,7 @@ mod tests {
                             | "state"
                             | "group"
                             | "topic"
+                            | "be"
                             | "host_name"
                             | "host_ip"
                             | "os"

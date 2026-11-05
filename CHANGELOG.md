@@ -3,6 +3,22 @@
 本文件记录 `wist-metrics` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.17.0] - 2026-11-05
+
+### 新增
+
+- 新采集域 `doris_metrics`（Doris：连 FE 的 MySQL 协议口读 BE 视图），4 条指标：
+  `doris_be_up`、`doris_be_capacity_bytes`、`doris_be_available_bytes`、`doris_be_tablets`。
+- `names::label` 新增 `BE`（`be`），并纳入 `ALL_LABELS` 闭集。
+
+### 为什么
+
+Doris 的容量与 tablet 分布是「哪台 BE 先扛不住」的唯一早期信号，而一台 FE 管多个 BE ——
+必须按 BE 拆序列，只报集群合计会把「一台写满、其余空闲」看成「整体还有 60%」。
+存活同理：BE 掉一台时，该 BE 的序列应当**消失**（不补 0），合计值不能掩盖。
+
+P0 不碰审计日志与 compaction 明细（见运行时文档 §12.1-7 的定案），那些在 P1 扩展里。
+
 ## [0.16.0] - 2026-11-05
 
 ### 新增
