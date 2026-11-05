@@ -3,6 +3,29 @@
 本文件记录 `wist-metrics` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.16.0] - 2026-11-05
+
+### 新增
+
+- 新采集域 `pg_metrics`（PostgreSQL，SQL 直采，不依赖 exporter），13 条指标：
+  - 存活与容量：`pg_up`、`pg_uptime_seconds`、`pg_connections_current`、`pg_connections_max`、
+    `pg_database_size_bytes`；
+  - 事务与错误（计数器）：`pg_xact_commit_total`、`pg_xact_rollback_total`、`pg_deadlocks_total`；
+  - IO：`pg_temp_bytes_total`、`pg_disk_read_bytes_total`、`pg_cache_hit_bytes_total`
+    （`blks_read` / `blks_hit` 在采集侧按 8 KiB 块换算成字节，消费方不需要知道 `BLCKSZ`）；
+  - 复制：`pg_replication_lag_seconds`、`pg_replication_running`。
+
+### 为什么
+
+PG 的故障面集中在「连接打满、事务回滚/死锁突然变多、临时文件暴涨、备库跟不上」。
+这四类在 `system_*` 主机指标上完全看不见，而 `pg_stat_database` / `pg_stat_activity`
+不需要任何扩展、只读账号即可读。
+
+两条口径约定：
+
+- **只在备库上**出复制序列（主库不出，**不补 0**）；
+- 备库还没回放过事务时只出 `running=0`，不出延迟（延迟为 NULL 不能当 0）。
+
 ## [0.15.0] - 2026-11-05
 
 ### 新增

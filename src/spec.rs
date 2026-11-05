@@ -636,7 +636,7 @@ pub const METRIC_SPECS: &[MetricSpec] = &[
     MetricSpec {
         collection_kind: "mysql_metrics",
         // 配置值（`innodb_buffer_pool_size` 变量），不是「已用」：已用看下面两条页数。
-        fact_key: "mysql.innodb.buffer_pool_size_bytes",
+        fact_key: "mysql.innodb.buffer_pool.size_bytes",
         name: "mysql_innodb_buffer_pool_size_bytes",
         unit: "By",
         value_type: "gauge_i64",
@@ -666,6 +666,142 @@ pub const METRIC_SPECS: &[MetricSpec] = &[
         dynamic_labels: NO_LABELS,
         semconv_ref: "",
     },
+    // ---- PostgreSQL（SQL 探针，不依赖 exporter）----
+    // 目标身份走 `instance`（`postgres:<host>:<port>` 或容器名），不带动态 label。
+    // 读数只来自 pg_stat_activity / pg_stat_database / pg_settings / 恢复状态函数。
+    MetricSpec {
+        collection_kind: "pg_metrics",
+        fact_key: "pg.up",
+        name: "pg_up",
+        unit: "1",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "pg_metrics",
+        fact_key: "pg.uptime.seconds",
+        name: "pg_uptime_seconds",
+        unit: "s",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "pg_metrics",
+        fact_key: "pg.connections.current",
+        name: "pg_connections_current",
+        unit: "1",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "db.client.connections.usage",
+    },
+    MetricSpec {
+        collection_kind: "pg_metrics",
+        fact_key: "pg.connections.max",
+        name: "pg_connections_max",
+        unit: "1",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "db.client.connections.max",
+    },
+    MetricSpec {
+        collection_kind: "pg_metrics",
+        // 提交/回滚是一对：只有提交数看不出「业务在报错」。
+        fact_key: "pg.xact.commit.total",
+        name: "pg_xact_commit_total",
+        unit: "1",
+        value_type: "counter_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "pg_metrics",
+        fact_key: "pg.xact.rollback.total",
+        name: "pg_xact_rollback_total",
+        unit: "1",
+        value_type: "counter_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "pg_metrics",
+        fact_key: "pg.deadlocks.total",
+        name: "pg_deadlocks_total",
+        unit: "1",
+        value_type: "counter_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "pg_metrics",
+        fact_key: "pg.temp.bytes.total",
+        name: "pg_temp_bytes_total",
+        unit: "By",
+        value_type: "counter_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "pg_metrics",
+        // `blks_read` / `blks_hit` 在采集侧按 8 KiB 块换算成字节。
+        fact_key: "pg.disk.read_bytes.total",
+        name: "pg_disk_read_bytes_total",
+        unit: "By",
+        value_type: "counter_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "pg_metrics",
+        fact_key: "pg.cache.hit_bytes.total",
+        name: "pg_cache_hit_bytes_total",
+        unit: "By",
+        value_type: "counter_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "pg_metrics",
+        fact_key: "pg.database.size_bytes",
+        name: "pg_database_size_bytes",
+        unit: "By",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "pg_metrics",
+        // 只在备库上出；主库不出这两条（不补 0）。
+        fact_key: "pg.replication.lag_seconds",
+        name: "pg_replication_lag_seconds",
+        unit: "s",
+        value_type: "gauge_f64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
+    MetricSpec {
+        collection_kind: "pg_metrics",
+        fact_key: "pg.replication.running",
+        name: "pg_replication_running",
+        unit: "1",
+        value_type: "gauge_i64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "",
+    },
 ];
 
 /// 按 `(collection_kind, fact_key)` 查找指标声明。
@@ -687,6 +823,7 @@ mod tests {
         "container_metrics",
         "kafka_broker_metrics",
         "mysql_metrics",
+        "pg_metrics",
     ];
     const UNITS: &[&str] = &["By", "s", "1"];
     const VALUE_TYPES: &[&str] = &["gauge_i64", "gauge_f64", "counter_i64", "counter_f64"];
@@ -776,6 +913,7 @@ mod tests {
             "container_metrics" => "container",
             "kafka_broker_metrics" => "kafka",
             "mysql_metrics" => "mysql",
+            "pg_metrics" => "pg",
             other => panic!("unexpected collection kind {other}"),
         };
         for spec in METRIC_SPECS {
@@ -934,7 +1072,7 @@ mod tests {
                 "gauge_i64",
             ),
             (
-                "mysql.innodb.buffer_pool_size_bytes",
+                "mysql.innodb.buffer_pool.size_bytes",
                 "mysql_innodb_buffer_pool_size_bytes",
                 "By",
                 "gauge_i64",
@@ -960,6 +1098,81 @@ mod tests {
                 spec.dynamic_labels.is_empty(),
                 "`{name}` 的身份走 instance，不应带动态 label"
             );
+        }
+    }
+
+    #[test]
+    fn pg_metrics_keep_the_documented_names() {
+        for (fact_key, name, unit, value_type) in [
+            ("pg.up", "pg_up", "1", "gauge_i64"),
+            ("pg.uptime.seconds", "pg_uptime_seconds", "s", "gauge_i64"),
+            (
+                "pg.connections.current",
+                "pg_connections_current",
+                "1",
+                "gauge_i64",
+            ),
+            ("pg.connections.max", "pg_connections_max", "1", "gauge_i64"),
+            (
+                "pg.xact.commit.total",
+                "pg_xact_commit_total",
+                "1",
+                "counter_i64",
+            ),
+            (
+                "pg.xact.rollback.total",
+                "pg_xact_rollback_total",
+                "1",
+                "counter_i64",
+            ),
+            (
+                "pg.deadlocks.total",
+                "pg_deadlocks_total",
+                "1",
+                "counter_i64",
+            ),
+            (
+                "pg.temp.bytes.total",
+                "pg_temp_bytes_total",
+                "By",
+                "counter_i64",
+            ),
+            (
+                "pg.disk.read_bytes.total",
+                "pg_disk_read_bytes_total",
+                "By",
+                "counter_i64",
+            ),
+            (
+                "pg.cache.hit_bytes.total",
+                "pg_cache_hit_bytes_total",
+                "By",
+                "counter_i64",
+            ),
+            (
+                "pg.database.size_bytes",
+                "pg_database_size_bytes",
+                "By",
+                "gauge_i64",
+            ),
+            (
+                "pg.replication.lag_seconds",
+                "pg_replication_lag_seconds",
+                "s",
+                "gauge_f64",
+            ),
+            (
+                "pg.replication.running",
+                "pg_replication_running",
+                "1",
+                "gauge_i64",
+            ),
+        ] {
+            let spec = find_metric_spec("pg_metrics", fact_key).expect("spec");
+            assert_eq!(spec.name, name, "`{fact_key}` 的线名被改动了");
+            assert_eq!(spec.unit, unit, "`{name}` 的单位被改动了");
+            assert_eq!(spec.value_type, value_type, "`{name}` 的值类型被改动了");
+            assert!(spec.dynamic_labels.is_empty(), "`{name}` 的身份走 instance");
         }
     }
 
