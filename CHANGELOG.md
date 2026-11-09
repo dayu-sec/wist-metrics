@@ -3,6 +3,21 @@
 本文件记录 `wist-metrics` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.18.0] - 2026-11-09
+
+### 新增
+
+- 注册主机整机 CPU 使用率 `system_cpu_usage_ratio`
+  （fact `host.cpu.usage_ratio`，`gauge_f64`，单位 `1`，无动态 label）：
+  采集端按固定 60s 窗口从 `system_cpu_seconds_total{mode="idle"}` 派生，
+  `usage = 1 - idle 增量 / (经过时间 × 核数)`，取值 0–1。累计量仍是权威源。
+
+### 为什么
+
+看板与调用方只想问「这台机器现在忙不忙」，不想在每条查询里重复写
+`1 - avg by (agent, instance) (rate(system_cpu_seconds_total{mode="idle"}[60s]))`。
+核维度已在窗口内平均，所以这条序列不带 `cpu` / `mode`，一台主机只有一个值。
+
 ## [0.17.0] - 2026-11-05
 
 ### 新增

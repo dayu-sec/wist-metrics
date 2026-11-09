@@ -92,6 +92,19 @@ pub const METRIC_SPECS: &[MetricSpec] = &[
     },
     MetricSpec {
         collection_kind: "host_metrics",
+        // 整机 CPU 使用率（0–1）：采集侧按固定窗口从 `mode="idle"` 的累计秒派生。
+        // 分母 = 经过时间 × 核数；**分子是 idle**，使用率取 `1 - idle_ratio`。
+        // 不带 `cpu` / `mode`：核维度已在窗口内取平均，留下会让「整机一个值」裂成多条序列。
+        fact_key: "host.cpu.usage_ratio",
+        name: "system_cpu_usage_ratio",
+        unit: "1",
+        value_type: "gauge_f64",
+        const_labels: NO_CONST,
+        dynamic_labels: NO_LABELS,
+        semconv_ref: "system.cpu.utilization",
+    },
+    MetricSpec {
+        collection_kind: "host_metrics",
         fact_key: "host.uptime.seconds",
         name: "system_uptime_seconds",
         unit: "s",
@@ -1361,6 +1374,19 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// 线名与口径是查询侧契约：`system_cpu_usage_ratio` 是整机口径，核维度已在窗口内平均。
+    #[test]
+    fn cpu_usage_ratio_is_the_documented_gauge() {
+        let spec = find_metric_spec("host_metrics", "host.cpu.usage_ratio").expect("spec");
+        assert_eq!(spec.name, "system_cpu_usage_ratio");
+        assert_eq!(spec.unit, "1");
+        assert_eq!(spec.value_type, "gauge_f64");
+        assert!(
+            spec.dynamic_labels.is_empty(),
+            "整机口径不得带 cpu / mode，否则一条主机裂成多条序列"
+        );
     }
 
     #[test]
