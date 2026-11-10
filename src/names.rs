@@ -15,7 +15,8 @@
 /// agent 自观测指标（规范 `metrics-data-spec.md` §self-observation）。
 ///
 /// 单位口径（规范 §4）：内存是 `By`，CPU 是**单核比例**（`1.0` = 占满一个核，多线程进程可 >1），
-/// 时延是 `s`，核数是 `1`。这些指标**没有** `instance` label —— 它们描述 agent 进程自身。
+/// 时延是 `s`，核数是 `1`。这些指标描述 agent 进程自身，但 `instance` 与主机指标一致
+/// （host resource id），这样才能和 `system_host_info` 关联出 `host_ip` 等主机身份。
 pub mod agent {
     /// 进程常驻内存（`By`）。
     pub const MEMORY_BYTES: &str = "agent_memory_bytes";

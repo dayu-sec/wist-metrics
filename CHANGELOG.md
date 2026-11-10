@@ -3,6 +3,19 @@
 本文件记录 `wist-metrics` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.19.0] - 2026-11-10
+
+### 变更（依赖）
+
+- 对齐 `wist-contracts 0.11.0`（采集状态改多字段正交模型）。指标注册表本身没有改动；
+  `spec::` / `provider::` / `target::` 对外暴露 contracts 类型，所以随 contracts 升 minor。
+
+### 文档
+
+- `names::agent` 的文档更正：自观测指标**带** `instance`（与主机指标一致，host resource id），
+  这样才能与 `system_host_info` 关联出 `host_ip`。此前注释写着「没有 `instance` label」，
+  已不是事实（行为自 agentd 0.31.1 起）。
+
 ## [0.18.0] - 2026-11-09
 
 ### 新增
