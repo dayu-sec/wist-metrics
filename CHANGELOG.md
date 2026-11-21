@@ -3,6 +3,15 @@
 本文件记录 `wist-metrics` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.20.0] - 2026-11-21
+
+### 变更（依赖）
+
+- 对齐 `wist-contracts 0.12.0`（新增采集来源 `KeyProcessMetrics`）。本仓代码无改动；
+  `spec::` / `provider::` / `target::` / `names::` 对外暴露 contracts 类型，所以随 contracts 升 minor。
+- 必须与 contracts 0.12 **一起用**：本版不能与 contracts 0.11 混用，否则树里会出现两份
+  contracts，跨边界的 `StringKeyValue` / 枚举对不上。
+
 ## [0.19.0] - 2026-11-10
 
 ### 变更（依赖）
