@@ -1,6 +1,6 @@
 [package]
 name = "wist-metrics"
-version = "0.20.0"  #@gxl:set(version)
+version = "0.20.2" #@gxl:set(version)
 edition = "2024"
 license = "Apache-2.0"
 authors = ["wist Dev Team"]
@@ -18,9 +18,14 @@ path = "src/lib.rs"
 [dependencies]
 jumo-derive = "0.1"
 serde = { version = "1.0", features = ["derive"] }
-wist-contracts = { version = "0.12" }
+wist-contracts = { version = "0.14" }
 # 本地联调：切 path（整条链一起切，见 rust-gx/local-dev-and-publishing）
-#wist-contracts = { version = "0.12", path = "../wist-contracts" }
+#wist-contracts = { version = "0.13", path = "../wist-contracts" }
 
 [dev-dependencies]
 serde_json = "1.0"
+
+[patch.crates-io]
+# E0（`ActionPlanStep.args`）：contracts 0.13 尚未发布，本地联调走 path。
+# 发布完成后注释回去。
+wist-contracts = { path = "../wist-contracts" }

@@ -3,6 +3,20 @@
 本文件记录 `wist-metrics` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.20.2] - 2026-11-22
+
+### 变更（依赖）
+
+- 对齐 `wist-contracts 0.14.0`。本仓代码无改动；对外暴露 contracts 类型，
+  必须与 contracts 0.14 一起用。
+
+## [0.20.1] - 2026-11-22
+
+### 变更（依赖）
+
+- 对齐 `wist-contracts 0.13.0`（新增 `ActionPlanStep.args`）。本仓代码无改动；
+  对外暴露 contracts 类型，必须与 contracts 0.13 一起用。
+
 ## [0.20.0] - 2026-11-21
 
 ### 变更（依赖）
