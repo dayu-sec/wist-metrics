@@ -1,6 +1,6 @@
 [package]
 name = "wist-metrics"
-version = "0.20.2" #@gxl:set(version)
+version = "0.21.0" #@gxl:set(version)
 edition = "2024"
 license = "Apache-2.0"
 authors = ["wist Dev Team"]
@@ -18,7 +18,7 @@ path = "src/lib.rs"
 [dependencies]
 jumo-derive = "0.1"
 serde = { version = "1.0", features = ["derive"] }
-wist-contracts = { version = "0.14" }
+wist-contracts = { version = "0.15" }
 # 本地联调：切 path（整条链一起切，见 rust-gx/local-dev-and-publishing）
 #wist-contracts = { version = "0.13", path = "../wist-contracts" }
 
