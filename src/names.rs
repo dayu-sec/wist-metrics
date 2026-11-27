@@ -249,6 +249,80 @@ mod tests {
         assert_eq!(millis_to_seconds(250), 0.25);
     }
 
+    /// “四舍五入而不是截断”得拿一个**能区分两者**的值来测：
+    /// `15.3ms` 四舍五入和截断都得 15，看不出差别；`15.6ms` 才是分水岭。
+    #[test]
+    fn seconds_to_millis_rounds_rather_than_truncates() {
+        assert_eq!(seconds_to_millis(0.0156), 16, "15.6ms 应进位到 16");
+        assert_eq!(seconds_to_millis(0.0154), 15, "15.4ms 应舍到 15");
+        // 0.5ms 边界：`f64::round` 远离零方向取整。
+        assert_eq!(seconds_to_millis(0.0005), 1);
+        assert_eq!(seconds_to_millis(0.0), 0);
+    }
+
+    /// 这些是**线名**：写侧（agentd）与读侧（网关 / 中心）分开引用，改名不会有任何编译错误，
+    /// 只会让页面变空 —— 正是本模块存在的理由（模块头写的那次事故）。
+    /// 前面几条只查形状（snake_case / 前缀 / 名单包含），把 `agent_cpu_ratio` 改成
+    /// `agent_cpu_usage` 照样全绿，所以这里按**字面量**钉住整张表。
+    #[test]
+    fn self_observation_names_keep_their_wire_strings() {
+        assert_eq!(
+            agent::ALL_SELF_METRICS,
+            [
+                "agent_memory_bytes",
+                "agent_cpu_ratio",
+                "agent_cpu_cores",
+                "agent_admin_latency_seconds",
+                "agent_discovery_policy_version",
+                "agent_uplink_metrics_failed_total",
+                "agent_collect_targets",
+            ]
+            .as_slice()
+        );
+        // 趋势图只拉这四个：顺序与内容都是它的一部分。
+        assert_eq!(
+            agent::HISTORY,
+            [
+                "agent_memory_bytes",
+                "agent_cpu_ratio",
+                "agent_cpu_cores",
+                "agent_admin_latency_seconds",
+            ]
+            .as_slice()
+        );
+    }
+
+    /// label 键同理：数据面 WPL/OML 按这些键取维度，改名 = 那个维度静默丢失。
+    /// 一条断言同时钉住**全部 19 个键的值与顺序**（表是从常量拼的，所以也覆盖了常量）。
+    #[test]
+    fn label_keys_keep_their_wire_strings() {
+        assert_eq!(
+            label::ALL_LABELS,
+            [
+                "agent",
+                "instance",
+                "disk_role",
+                "mountpoint",
+                "fstype",
+                "device",
+                "cpu",
+                "mode",
+                "state",
+                "target_kind",
+                "outcome",
+                "group",
+                "topic",
+                "be",
+                "host_name",
+                "host_ip",
+                "os",
+                "arch",
+                "kernel",
+            ]
+            .as_slice()
+        );
+    }
+
     /// `agent` 是唯一的身份 label 键；`agent_id` 只作为**报文**字段存在，不得出现在序列上。
     #[test]
     fn agent_identity_label_is_not_agent_id() {
